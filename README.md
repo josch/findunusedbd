@@ -35,10 +35,11 @@ This script will put the successful builds in `buildsuccess.list` and the found
 unused build dependencies as `*.unusedbd` for each `dsc` file in the current
 directory. A second pass on the successfully built `dsc` files will then check
 each of the found unused build dependencies for their validity by replacing
-them by an empty equivs package one after another. The results of that run are
-stored in `*.unusedbd.real` files for each `dsc` file in the current directory.
-The `run.sh` script expects to find `findunusedbd.sh` directly under `/home`.
-Best try this out in a chroot to not mess with the host system.
+them by an empty equivs package with no dependencies one after another. The
+results of that run are stored in `*.unusedbd.real` files for each `dsc` file
+in the current directory.  The `run.sh` script expects to find
+`findunusedbd.sh` directly under `/home`.  Best try this out in a chroot to not
+mess with the host system.
 
 Schroot setup
 -------------
@@ -64,7 +65,6 @@ Bugs
 
  - when investigating which build dependencies are unused, virtual packages are not taken into account
  - maybe the fake equivs package can be built outside the schroot to avoid the additional dependencies for installing equivs
- - maybe equivs can be avoided altogether by finding a way to edit debian/control on the fly
 
 License
 -------

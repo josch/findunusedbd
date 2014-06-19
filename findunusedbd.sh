@@ -5,24 +5,29 @@
 
 if [ "$#" -eq 0 ]; then
 	rm -rf /home/myfifo /home/myfifo2 /tmp/pkglists
+	# fifo to receive data
 	mkfifo /home/myfifo
+	# fifo to acknowledge reception
 	mkfifo /home/myfifo2
+	# make sure the sbuild user can write to the fifos
+	chmod a+w /home/myfifo
+	chmod a+w /home/myfifo2
 	mkdir -p /tmp/pkglists
 	# strip the architecture qualifier
-	cat /home/myfifo | cut -d ':' -f 1 | sort > initialselection.list
+	cat /home/myfifo | sort > initialselection.list
 	echo > /home/myfifo2
-	cat /home/myfifo | cut -d ':' -f 1 | sort > fullselection.list
+	cat /home/myfifo | sort > fullselection.list
 	echo > /home/myfifo2
 	# get all packages that were installed on top of the base packages
 	comm -13 initialselection.list fullselection.list > bdselection.list
 	while true; do
-		pkgname=`cat /home/myfifo | cut -d ':' -f 1`
+		pkgnamever=`cat /home/myfifo`
 		echo > /home/myfifo2
 		# end loop when packagename is empty
-		[ -z "$pkgname" ] && break
+		[ -z "$pkgnamever" ] && break
 		# check if the package was installed as its build dependencies
-		if grep --line-regexp $pkgname bdselection.list; then
-			cat /home/myfifo | sort > "/tmp/pkglists/$pkgname"
+		if grep --line-regexp $pkgnamever bdselection.list; then
+			cat /home/myfifo | sort > "/tmp/pkglists/$pkgnamever"
 		else
 			cat /home/myfifo > /dev/null
 		fi
@@ -53,27 +58,33 @@ if [ "$#" -eq 0 ]; then
 		| uniq \
 		> accessed.log
 	# now get all packages in /tmp/pkglists that have files that never appear in the collected trace
-	while read pkg; do
+	while read namever; do
+		name=`echo $namever | cut -d '=' -f 1 | cut -d ':' -f 1`
 		# FIXME: the following cannot handle dependencies on virtual packages
-		[ -z "`comm -12 accessed.log /tmp/pkglists/$pkg`" ] \
-			&& grep --line-regexp "$pkg" /tmp/sbuild-dummy-depends || true
+		if [ -z "`comm -12 accessed.log /tmp/pkglists/$namever`" ] \
+			&& grep --line-regexp "$name" /tmp/sbuild-dummy-depends > /dev/null; then
+			echo $namever
+		fi
 	done > unneededdepends.list < bdselection.list
 else
 	case "$1" in
 		chroot-setup)
 			env
-			dpkg --get-selections | awk '{ print $1; }' > /home/myfifo
+			dpkg --list | awk '$1 == "ii" { print $2"="$3 }' > /home/myfifo
 			cat /home/myfifo2 > /dev/null
 			;;
 		pre-realbuild)
 			# get the current selection so that the parent script can find the additional packages that were installed
-			dpkg --get-selections | awk '{ print $1; }' > /home/myfifo
+			dpkg --list | awk '$1 == "ii" { print $2"="$3 }' > /home/myfifo
 			cat /home/myfifo2 > /dev/null
 			# output the files belonging to all packages
-			for pkg in `dpkg --get-selections | awk '{ print $1; }'`; do
-				echo $pkg > /home/myfifo
+			dpkg --list | awk '$1 == "ii" { print $2, $3 }' | while read namever; do
+				set -- $namever
+				name=$1
+				ver=$2
+				echo "${name}=${ver}" > /home/myfifo
 				cat /home/myfifo2 > /dev/null
-				dpkg -L $pkg > /home/myfifo
+				dpkg -L $name > /home/myfifo
 				cat /home/myfifo2 > /dev/null
 			done
 			# output an empty line to indicate the end
@@ -97,10 +108,23 @@ else
 			cat /home/myfifo2 > /dev/null
 			;;
 		equivs)
-			pkgname="$2"
+			namever="$2"
 			# create and install a package with same name and version but without dependencies
-			apt-cache show --no-all-versions $pkgname | grep -v "^Depends:" | grep -v "^Pre-Depends:" | equivs-build -
-			dpkg -i ${pkgname}_*.deb
+			# removing Source: field because of bug#751942
+			apt-cache show --no-all-versions $namever
+				| grep -v "^Pre-Depends:" \
+				| grep -v "^Depends:" \
+				| grep -v "^Recommends:" \
+				| grep -v "^Suggests:" \
+				| grep -v "^Conflicts:" \
+				| grep -v "^Breaks:" \
+				| grep -v "^Provides:" \
+				| grep -v "^Replaces:" \
+				| grep -v "^Source:" \
+				| equivs-build -
+			name=`echo $namever | cut -d '=' -f 1 | cut -d ':' -f 1`
+			# we use a wildcard because there should only be a single file anyways
+			dpkg -i ${name}_*.deb
 			;;
 		*)
 			echo "invalid argument: $1" >&2
