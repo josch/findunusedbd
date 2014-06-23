@@ -19,7 +19,7 @@ build () {
 		"$dsc"
 	ret=$?
 	rm -f *.deb *.udeb *.changes
-	if [ $ret -eq 0 ] && [ -s unneededdepends.list ]; then
+	if [ $ret -eq 0 ] && [ -s "${tmpdir}/unneededdepends.list" ]; then
 		mv "${tmpdir}/unneededdepends.list" `basename $dsc .dsc`.${archall}.unusedbd
 		echo $dsc >> buildsuccess.${archall}.list
 	fi
