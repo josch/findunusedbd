@@ -48,7 +48,25 @@ for a in "arch-all" "no-arch-all"; do
 		echo $dsc
 		build "$dsc" "$a"
 	done
+done
 
+# now process the possibly droppable build dependencies found by no-arch-all
+# and remove from them all that were also found by arch-all
+for noarchall in *.no-arch-all.unusedbd; do
+	archall=`basename $noarchall .no-arch-all.unusedbd`.arch-all.unusedbd
+	if [ -s $archall ]; then
+		# only keep the values unique to no-arch-all
+		comm -23 $noarchall $archall > tmp
+		if [ -s tmp ]; then
+			mv tmp $noarchall
+		else
+			# no unique values in noarchall
+			rm $noarchall
+		fi
+	fi
+done
+
+for a in "arch-all" "no-arch-all"; do
 	while read dscname; do
 		echo $dscname
 		check $dscname "$a"
