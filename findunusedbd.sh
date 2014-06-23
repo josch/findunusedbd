@@ -78,7 +78,12 @@ elif [ "$#" -eq 2 ]; then
 			# signal that the build is done
 			echo > "${tmpdir}/myfifo"
 			# wait for the parent process to finish and exit
+			# if we do not do this then schroot cannot umount
+			# because our script will still have the directory as
+			# its working dir
 			cat "${tmpdir}/myfifo" > /dev/null
+			# give it some time to really exit (value is arbitrary)
+			sleep 1
 			;;
 		equivs)
 			namever="$2"
