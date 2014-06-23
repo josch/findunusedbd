@@ -35,6 +35,8 @@ if [ "$#" -eq 1 ]; then
 			echo $namever
 		fi
 	done > "${tmpdir}/unneededdepends.list" < "${tmpdir}/bdselection.list"
+	# signal that the script is about to exit
+	echo > "${tmpdir}/myfifo"
 elif [ "$#" -eq 2 ]; then
 	case "$1" in
 		chroot-setup)
@@ -75,6 +77,8 @@ elif [ "$#" -eq 2 ]; then
 			tmpdir="$2"
 			# signal that the build is done
 			echo > "${tmpdir}/myfifo"
+			# wait for the parent process to finish and exit
+			cat "${tmpdir}/myfifo" > /dev/null
 			;;
 		equivs)
 			namever="$2"
