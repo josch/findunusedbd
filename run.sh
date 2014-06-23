@@ -32,7 +32,7 @@ check () {
 	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
 	while read bd; do
 		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
-		sbuild --no-arch-all \
+		sbuild --$archall \
 			--chroot-setup-commands="/home/findunusedbd.sh equivs $bd" \
 			"$dscname"
 		if [ $? -eq 0 ]; then
