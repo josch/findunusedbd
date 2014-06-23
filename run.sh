@@ -33,7 +33,7 @@ build () {
 }
 
 for a in "arch-all" "no-arch-all"; do
-	echo > buildsuccess.${a}.list
+	>buildsuccess.${a}.list
 	for dsc in $@; do
 		echo $dsc
 		build "$dsc" "$a"
