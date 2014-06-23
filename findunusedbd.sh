@@ -55,7 +55,7 @@ elif [ "$#" -eq 2 ]; then
 				name=$1
 				ver=$2
 				if grep --line-regexp "${name}=${ver}" "${tmpdir}/bdselection.list"; then
-					dpkg -L $name > "${tmpdir}/${name}=${ver}"
+					dpkg -L $name | sort > "${tmpdir}/${name}=${ver}"
 				fi
 			done
 			# output the dependencies of the sbuild dummy package
@@ -67,6 +67,8 @@ elif [ "$#" -eq 2 ]; then
 				| xargs -I {} dpkg-query --showformat='${Depends}\n' --show {} \
 				| sed 's/, \+/\n/'g \
 				| sed 's/\([a-zA-Z0-9][a-zA-Z0-9+.-]*\).*/\1/' \
+				| sort \
+				| uniq \
 				> "${tmpdir}/sbuild-dummy-depends"
 			# output the schroot id to start tracing
 			echo $SCHROOT_SESSION_ID > "${tmpdir}/myfifo"
