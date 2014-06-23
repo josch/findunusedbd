@@ -111,7 +111,7 @@ else
 			namever="$2"
 			# create and install a package with same name and version but without dependencies
 			# removing Source: field because of bug#751942
-			apt-cache show --no-all-versions $namever
+			apt-cache show --no-all-versions $namever \
 				| grep -v "^Pre-Depends:" \
 				| grep -v "^Depends:" \
 				| grep -v "^Recommends:" \
