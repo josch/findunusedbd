@@ -13,9 +13,9 @@ build () {
 	chmod a+w "${tmpdir}/myfifo"
 	/home/findunusedbd.sh "$tmpdir" &
 	sbuild --$archall \
-		--chroot-setup-commands="/home/findunusedbd.sh $tmpdir chroot-setup" \
-		--pre-realbuild-commands="/home/findunusedbd.sh $tmpdir pre-realbuild" \
-		--post-realbuild-commands="/home/findunusedbd.sh $tmpdir post-realbuild" \
+		--chroot-setup-commands="/home/findunusedbd.sh chroot-setup $tmpdir" \
+		--pre-realbuild-commands="/home/findunusedbd.sh pre-realbuild $tmpdir" \
+		--post-realbuild-commands="/home/findunusedbd.sh post-realbuild $tmpdir" \
 		"$dsc"
 	ret=$?
 	rm -f *.deb *.udeb *.changes
