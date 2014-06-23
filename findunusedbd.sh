@@ -54,7 +54,7 @@ elif [ "$#" -eq 2 ]; then
 				set -- $namever
 				name=$1
 				ver=$2
-				if grep --line-regexp $pkgnamever "${tmpdir}/bdselection.list"; then
+				if grep --line-regexp $namever "${tmpdir}/bdselection.list"; then
 					dpkg -L $name > "${tmpdir}/${name}=${ver}"
 				fi
 			done
