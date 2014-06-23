@@ -5,6 +5,12 @@ if [ $# -eq 0 ]; then
 	exit 1
 fi
 
+# 1. create temporary directory
+# 2. create fifo
+# 3. run findunusedbd to start fatrace from outside
+# 4. run sbuild with the correct hooks
+# 5. if sbuild was successful, collect unused dependencies
+# 6. remove temporary directory
 build () {
 	dsc="$1"
 	archall="$2"
@@ -24,22 +30,6 @@ build () {
 		echo $dsc >> buildsuccess.${archall}.list
 	fi
 	rm -rf "$tmpdir"
-}
-
-check () {
-	dscname="$1"
-	archall="$2"
-	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
-	while read bd; do
-		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
-		sbuild --$archall --quiet \
-			--chroot-setup-commands="/home/findunusedbd.sh equivs $bd" \
-			"$dscname"
-		if [ $? -eq 0 ]; then
-			echo $bd >> "${unusedbdname}".real
-		fi
-		rm -f *.deb *.udeb *.changes
-	done < $unusedbdname
 }
 
 for a in "arch-all" "no-arch-all"; do
@@ -65,6 +55,25 @@ for noarchall in *.no-arch-all.unusedbd; do
 		fi
 	fi
 done
+
+# 1. for all possibly unused dependencise, run sbuild with a hook creating a
+#    fake equivs package
+# 2. if sbuild was successful, collect result
+check () {
+	dscname="$1"
+	archall="$2"
+	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
+	while read bd; do
+		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
+		sbuild --$archall --quiet \
+			--chroot-setup-commands="/home/findunusedbd.sh equivs $bd" \
+			"$dscname"
+		if [ $? -eq 0 ]; then
+			echo $bd >> "${unusedbdname}".real
+		fi
+		rm -f *.deb *.udeb *.changes
+	done < $unusedbdname
+}
 
 for a in "arch-all" "no-arch-all"; do
 	while read dscname; do
