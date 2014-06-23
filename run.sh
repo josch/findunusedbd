@@ -12,7 +12,7 @@ build () {
 	mkfifo "${tmpdir}/myfifo"
 	chmod a+w "${tmpdir}/myfifo"
 	/home/findunusedbd.sh "$tmpdir" &
-	sbuild --$archall \
+	sbuild --$archall --quiet \
 		--chroot-setup-commands="/home/findunusedbd.sh chroot-setup $tmpdir" \
 		--pre-realbuild-commands="/home/findunusedbd.sh pre-realbuild $tmpdir" \
 		--post-realbuild-commands="/home/findunusedbd.sh post-realbuild $tmpdir" \
@@ -32,7 +32,7 @@ check () {
 	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
 	while read bd; do
 		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
-		sbuild --$archall \
+		sbuild --$archall --quiet \
 			--chroot-setup-commands="/home/findunusedbd.sh equivs $bd" \
 			"$dscname"
 		if [ $? -eq 0 ]; then
