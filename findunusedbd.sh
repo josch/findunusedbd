@@ -30,7 +30,7 @@ if [ "$#" -eq 1 ]; then
 	while read namever; do
 		name=`echo $namever | cut -d '=' -f 1 | cut -d ':' -f 1`
 		# FIXME: the following cannot handle dependencies on virtual packages
-		if [ -z `comm -12 "${tmpdir}/accessed.log" "${tmpdir}/$namever"` ] \
+		if [ -z "`comm -12 "${tmpdir}/accessed.log" "${tmpdir}/$namever"`" ] \
 			&& grep --line-regexp "$name" "${tmpdir}/sbuild-dummy-depends" > /dev/null; then
 			echo $namever
 		fi
