@@ -56,9 +56,11 @@ Install `equivs`:
 Bugs
 ----
 
+ - maybe add list of packages whose files are never used but modify the build nevertheless (like `hardening-wrapper`)
+ - use reproducible builds to check that the output is the same
  - when investigating which build dependencies are unused, virtual packages are not taken into account
  - maybe the fake equivs package can be built outside the schroot to avoid the additional dependencies for installing equivs
- - fatrace suffers from [bug#722901](https://bugs.debian.org/722901)
+ - fatrace suffers from [bug#722901](https://bugs.debian.org/722901) which can be seen when trying to compile `lsof`
 
 Feature Requests
 ----------------
