@@ -3,43 +3,36 @@ Standalone
 
 Use `fatrace` to record all file access during an `sbuild` run and find those
 build dependencies which have their files never needed. You need superuser
-privileges to run this script because of `fatrace`.
+privileges to run this script because of `fatrace`. You need to copy
+`findunusedbd.sh` into `/home` so best run all of this inside a chroot to
+prevent a mess.
 
-Run it like follows. In one terminal execute:
+Run it like follows:
 
-	$ ./findunusedbd.sh
+	$ ./run.sh foo.dsc bar.dsc [...]
 
-In another run sbuild like this:
+This will call sbuild like this for each `dsc` given:
 
 	$ sbuild \
-		--chroot-setup-commands='/home/user/path/to/findunusedbd.sh chroot-setup' \
-		--pre-realbuild-commands='/home/user/path/to/findunusedbd.sh pre-realbuild' \
-		--post-realbuild-commands='/home/user/path/to/findunusedbd.sh post-realbuild'
+		--chroot-setup-commands='/home/findunusedbd.sh chroot-setup' \
+		--pre-realbuild-commands='/home/findunusedbd.sh pre-realbuild' \
+		--post-realbuild-commands='/home/findunusedbd.sh post-realbuild'
 
 This needs the --pre-realbuild-commands and --post-realbuild-commands to exist
 which can be added to sbuild by applying
 `0001-add-pre-realbuild-commands-and-post-realbuild-comman.patch` to it.
 
-Any unused dependencies can then be found by investigating the file
-`unneededdepends.list`.
+The first pass will use `fatrace` to find build dependencies on packages with
+files that are never used during the whole build. Since many of these are gonna
+be meta packages, a second pass replaces the candidate package with a fake
+equivs package of same name and version but without dependencies and tries to
+rebuild.
 
-Batch
------
-
-The process can be automated for multiple packages by passing `dsc` files to
-`run.sh`:
-
-	$ ./run.sh ../mysources/*.dsc
-
-This script will put the successful builds in `buildsuccess.list` and the found
-unused build dependencies as `*.unusedbd` for each `dsc` file in the current
-directory. A second pass on the successfully built `dsc` files will then check
-each of the found unused build dependencies for their validity by replacing
-them by an empty equivs package with no dependencies one after another. The
-results of that run are stored in `*.unusedbd.real` files for each `dsc` file
-in the current directory.  The `run.sh` script expects to find
-`findunusedbd.sh` directly under `/home`.  Best try this out in a chroot to not
-mess with the host system.
+Both passes are done for `--arch-all` and `--no-arch-all`. Any unused
+dependencies can then be found by investigating the `*.arch-all.unusedbd.real`
+and `*.no-arch-all.unusedbd.real`. The result from the former can permanently
+be dropped from the `Build-Depends`. The result from the latter can be added to
+`Build-Depends-Indep`.
 
 Schroot setup
 -------------
@@ -65,6 +58,12 @@ Bugs
 
  - when investigating which build dependencies are unused, virtual packages are not taken into account
  - maybe the fake equivs package can be built outside the schroot to avoid the additional dependencies for installing equivs
+ - fatrace suffers from [bug#722901](https://bugs.debian.org/722901)
+
+Feature Requests
+----------------
+
+ - build with `DEB_BUILD_OPTIONS=nocheck` once it is possible to add `<!profile.nocheck>`
 
 License
 -------
