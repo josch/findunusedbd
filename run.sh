@@ -63,6 +63,9 @@ check () {
 	dscname="$1"
 	archall="$2"
 	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
+	if [! -f "$unusedbdname" ]; then
+		return
+	fi
 	while read bd; do
 		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
 		sbuild --$archall --quiet \
