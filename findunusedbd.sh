@@ -21,15 +21,15 @@ get_metaset() {
 	fi
 	# check if there is any regular file in the package besides /usr/share/doc
 	if [ $ismeta = "no" ]; then
-		apt-get download "${name}=${ver}"
+		apt-get download "${name}=${ver}" > /dev/null
 		mkdir "$name"
-		dpkg -x ${name}_${ver}_*.deb $name
+		dpkg --extract ${name}_${ver}_*.deb $name
 		if [ -d ${name}/usr/share/doc ]; then
 			rm -r ${name}/usr/share/doc
 		fi
 		# check if besides /usr/share/doc there is any regular file
 		# in this package (symlinks do not count)
-		if [ `find tmp -type f | wc -l` -eq 0 ]; then
+		if [ `find $name -type f | wc -l` -eq 0 ]; then
 			ismeta="yes"
 		fi
 		rm -r ${name}_${ver}_*.deb $name
@@ -92,7 +92,8 @@ elif [ "$#" -eq 2 ]; then
 			# output the files belonging to all packages
 			dpkg --list | awk '$1 == "ii" { print $2, $3 }' | while read namever; do
 				set -- $namever
-				name=$1
+				# strip off architecture qualifier
+				name=`echo $1 | cut -d ':' -f 1`
 				ver=$2
 				if grep --line-regexp "${name}=${ver}" "${tmpdir}/bdselection.list"; then
 					# if the package contains no other files than in /usr/share/doc
