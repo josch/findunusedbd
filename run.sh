@@ -63,7 +63,7 @@ check () {
 	dscname="$1"
 	archall="$2"
 	unusedbdname=`basename $dscname .dsc`.${archall}.unusedbd
-	if [! -f "$unusedbdname" ]; then
+	if [ ! -f "$unusedbdname" ]; then
 		return
 	fi
 	while read bd; do
