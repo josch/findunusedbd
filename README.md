@@ -51,7 +51,7 @@ Make apt ignore the `Valid-Until` header:
 
 Install `equivs`:
 
-	$ apt-get install equivs --no-install-recommends
+	$ apt-get install equivs dctrl-tools --no-install-recommends
 
 Bugs
 ----

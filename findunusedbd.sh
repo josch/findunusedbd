@@ -113,7 +113,7 @@ elif [ "$#" -eq 2 ]; then
 				| grep sbuild-build-depends \
 				| grep -v sbuild-build-depends-core-dummy \
 				| grep -v sbuild-build-depends-essential-dummy \
-				| grep -v sbuild-build-depends-lintian-dummy`
+				| grep -v sbuild-build-depends-lintian-dummy
 			# output the dependencies of the sbuild dummy package
 			# we use apt to show dependencies because we do not want
 			# disjunctions or purely virtual packages to be in the output
@@ -153,6 +153,8 @@ elif [ "$#" -eq 2 ]; then
 				| while read pkgname; do
 					# create and install a package with same name and version but without dependencies
 					# removing Source: field because of bug#751942
+					# we keep the Provides field because otherwise the new package might not
+					# satisfy the dependency
 					apt-cache show --no-all-versions $pkgname \
 						| grep -v "^Pre-Depends:" \
 						| grep -v "^Depends:" \
@@ -160,7 +162,6 @@ elif [ "$#" -eq 2 ]; then
 						| grep -v "^Suggests:" \
 						| grep -v "^Conflicts:" \
 						| grep -v "^Breaks:" \
-						| grep -v "^Provides:" \
 						| grep -v "^Replaces:" \
 						| grep -v "^Source:" \
 						| equivs-build -
@@ -168,6 +169,9 @@ elif [ "$#" -eq 2 ]; then
 					dpkg -i ${pkgname}_*.deb
 					rm ${pkgname}_*.deb
 				done
+			# now that all fake packages are installed we need to
+			# remove all those dependencies that are not needed anymore
+			apt-get autoremove --assume-yes
 			;;
 		*)
 			echo "invalid argument: $1" >&2
