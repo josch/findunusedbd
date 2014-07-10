@@ -23,7 +23,8 @@ get_metaset() {
 	if [ $ismeta = "no" ]; then
 		apt-get download "${name}=${ver}" > /dev/null
 		mkdir "$name"
-		dpkg --extract ${name}_${ver}_*.deb $name
+		# we cannot include the version here because apt urlencodes the : character
+		dpkg --extract ${name}_*.deb $name
 		if [ -d ${name}/usr/share/doc ]; then
 			rm -r ${name}/usr/share/doc
 		fi
@@ -110,11 +111,11 @@ elif [ "$#" -eq 2 ]; then
 				fi
 			done
 			# find sbuild dummy package name
-			dpkg --get-selections | awk '{ print $1; }' \
+			dummypkgname=`dpkg --get-selections | awk '{ print $1; }' \
 				| grep sbuild-build-depends \
 				| grep -v sbuild-build-depends-core-dummy \
 				| grep -v sbuild-build-depends-essential-dummy \
-				| grep -v sbuild-build-depends-lintian-dummy
+				| grep -v sbuild-build-depends-lintian-dummy`
 			# output the dependencies of the sbuild dummy package
 			# we use apt to show dependencies because we do not want
 			# disjunctions or purely virtual packages to be in the output
