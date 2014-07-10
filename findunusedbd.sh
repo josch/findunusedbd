@@ -3,6 +3,47 @@
 #
 #    sbuild --chroot-setup-commands='/home/prebuildcmd.sh chroot-setup' --pre-realbuild-commands='/home/prebuildcmd.sh pre-realbuild' --post-realbuild-commands='/home/prebuildcmd.sh post-realbuild'
 
+get_metaset() {
+	name=$1
+	ver=$2
+	ismeta="no"
+	# now run all tests for meta package and skip to the end if package was
+	# found to be a meta package by one of the methods
+	# check for tag role::dummy and role::metapackage
+	if [ $ismeta = "no" ]; then
+		# we need grep-dctrl because the Tag field can be multi-line
+		if apt-cache show --no-all-versions "${name}=${ver}" \
+			| grep-dctrl -P "" -s Tag -n \
+			| sed 's/, /\n/g; s/[, ]//g;' \
+			| egrep '^(role::metapackage|role::dummy)$'; then
+			ismeta="yes"
+		fi
+	fi
+	# check if there is any regular file in the package besides /usr/share/doc
+	if [ $ismeta = "no" ]; then
+		apt-get download "${name}=${ver}"
+		mkdir "$name"
+		dpkg -x ${name}_${ver}_*.deb $name
+		if [ -d ${name}/usr/share/doc ]; then
+			rm -r ${name}/usr/share/doc
+		fi
+		# check if besides /usr/share/doc there is any regular file
+		# in this package (symlinks do not count)
+		if [ `find tmp -type f | wc -l` -eq 0 ]; then
+			ismeta="yes"
+		fi
+		rm -r ${name}_${ver}_*.deb $name
+	fi
+	if [ $ismeta = "yes" ]; then
+		# retrieve all its unversioned dependencies
+		# we already require grep-dctrl above so we can use it now too
+		apt-cache depends --important --installed "${name}=${ver}" \
+			| awk ' $1 ~ /\|?(Depends|PreDepends):/ { print $2; }'
+	fi
+	# output this package as well in any case
+	echo $name
+}
+
 if [ "$#" -eq 1 ]; then
 	tmpdir="$1"
 	# once something is written to the fifo, it indicates that fatrace should start
@@ -29,7 +70,6 @@ if [ "$#" -eq 1 ]; then
 	# now get all packages in /tmp/pkglists that have files that never appear in the collected trace
 	while read namever; do
 		name=`echo $namever | cut -d '=' -f 1 | cut -d ':' -f 1`
-		# FIXME: the following cannot handle dependencies on virtual packages
 		if [ -z "`comm -12 "${tmpdir}/accessed.log" "${tmpdir}/$namever"`" ] \
 			&& grep --line-regexp "$name" "${tmpdir}/sbuild-dummy-depends" > /dev/null; then
 			echo $namever
@@ -55,18 +95,30 @@ elif [ "$#" -eq 2 ]; then
 				name=$1
 				ver=$2
 				if grep --line-regexp "${name}=${ver}" "${tmpdir}/bdselection.list"; then
-					dpkg -L $name | sort > "${tmpdir}/${name}=${ver}"
+					# if the package contains no other files than in /usr/share/doc
+					# or if all the other files are symlinks
+					# or if it is tagged role::dummy
+					# or if it is tagged role::metapackage
+					# then it is a meta package and we append to the file it contains
+					# the files contained by the packages it depends upon
+					get_metaset $name $ver | sort | uniq \
+						| while read pkgname; do
+							dpkg --listfiles $pkgname
+						done | sort | uniq \
+						> "${tmpdir}/${name}=${ver}"
 				fi
 			done
-			# output the dependencies of the sbuild dummy package
+			# find sbuild dummy package name
 			dpkg --get-selections | awk '{ print $1; }' \
 				| grep sbuild-build-depends \
 				| grep -v sbuild-build-depends-core-dummy \
 				| grep -v sbuild-build-depends-essential-dummy \
-				| grep -v sbuild-build-depends-lintian-dummy \
-				| xargs -I {} dpkg-query --showformat='${Depends}\n' --show {} \
-				| sed 's/, \+/\n/'g \
-				| sed 's/\([a-zA-Z0-9][a-zA-Z0-9+.-]*\).*/\1/' \
+				| grep -v sbuild-build-depends-lintian-dummy`
+			# output the dependencies of the sbuild dummy package
+			# we use apt to show dependencies because we do not want
+			# disjunctions or purely virtual packages to be in the output
+			apt-cache depends --important --installed $dummypkgname \
+				| awk ' $1 ~ /\|?(Depends|PreDepends):/ { print $2; }' \
 				| sort \
 				| uniq \
 				> "${tmpdir}/sbuild-dummy-depends"
@@ -89,22 +141,33 @@ elif [ "$#" -eq 2 ]; then
 			;;
 		equivs)
 			namever="$2"
-			# create and install a package with same name and version but without dependencies
-			# removing Source: field because of bug#751942
-			apt-cache show --no-all-versions $namever \
-				| grep -v "^Pre-Depends:" \
-				| grep -v "^Depends:" \
-				| grep -v "^Recommends:" \
-				| grep -v "^Suggests:" \
-				| grep -v "^Conflicts:" \
-				| grep -v "^Breaks:" \
-				| grep -v "^Provides:" \
-				| grep -v "^Replaces:" \
-				| grep -v "^Source:" \
-				| equivs-build -
 			name=`echo $namever | cut -d '=' -f 1 | cut -d ':' -f 1`
-			# we use a wildcard because there should only be a single file anyways
-			dpkg -i ${name}_*.deb
+			ver=`echo $namever | cut -d '=' -f 2`
+			# if the package contains no other files than in /usr/share/doc
+			# or if all the other files are symlinks
+			# or if it is tagged role::dummy
+			# or if it is tagged role::metapackage
+			# then it is a meta package and we also create fake equivs
+			# packages for all packages it depends upon
+			get_metaset $name $ver | sort | uniq \
+				| while read pkgname; do
+					# create and install a package with same name and version but without dependencies
+					# removing Source: field because of bug#751942
+					apt-cache show --no-all-versions $pkgname \
+						| grep -v "^Pre-Depends:" \
+						| grep -v "^Depends:" \
+						| grep -v "^Recommends:" \
+						| grep -v "^Suggests:" \
+						| grep -v "^Conflicts:" \
+						| grep -v "^Breaks:" \
+						| grep -v "^Provides:" \
+						| grep -v "^Replaces:" \
+						| grep -v "^Source:" \
+						| equivs-build -
+					# we use a wildcard because there should only be a single file anyways
+					dpkg -i ${pkgname}_*.deb
+					rm ${pkgname}_*.deb
+				done
 			;;
 		*)
 			echo "invalid argument: $1" >&2

@@ -68,8 +68,10 @@ check () {
 	fi
 	while read bd; do
 		# now run sbuild with "findunusedbd.sh equivs" creating a fake equivs package
+		# we need to run it as a pre-realbuild-commands hook because it needs all
+		# dependencies to be installed
 		sbuild --$archall --quiet \
-			--chroot-setup-commands="/home/findunusedbd.sh equivs $bd" \
+			--pre-realbuild-commands="/home/findunusedbd.sh equivs $bd" \
 			"$dscname"
 		if [ $? -eq 0 ]; then
 			echo $bd >> "${unusedbdname}".real
