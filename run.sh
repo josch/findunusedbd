@@ -51,7 +51,7 @@ for noarchall in *.no-arch-all.unusedbd; do
 			mv tmp $noarchall
 		else
 			# no unique values in noarchall
-			rm $noarchall
+			rm tmp $noarchall
 		fi
 	fi
 done
