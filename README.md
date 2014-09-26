@@ -5,7 +5,8 @@ Use `fatrace` to record all file access during an `sbuild` run and find those
 build dependencies which have their files never needed. You need superuser
 privileges to run this script because of `fatrace`. You need to copy
 `findunusedbd.sh` into `/home` so best run all of this inside a chroot to
-prevent a mess.
+prevent a mess (in case you use a chroot, don't forget to mount /proc and
+install fatrace).
 
 Run it like follows:
 
@@ -15,12 +16,8 @@ This will call sbuild like this for each `dsc` given:
 
 	$ sbuild \
 		--chroot-setup-commands='/home/findunusedbd.sh chroot-setup' \
-		--pre-realbuild-commands='/home/findunusedbd.sh pre-realbuild' \
-		--post-realbuild-commands='/home/findunusedbd.sh post-realbuild'
-
-This needs the --pre-realbuild-commands and --post-realbuild-commands to exist
-which can be added to sbuild by applying
-`0001-add-pre-realbuild-commands-and-post-realbuild-comman.patch` to it.
+		--starting-build-commands='/home/findunusedbd.sh starting-build' \
+		--finished-build-commands='/home/findunusedbd.sh finished-build'
 
 The first pass will use `fatrace` to find build dependencies on packages with
 files that are never used during the whole build. Since many of these are gonna
@@ -31,7 +28,7 @@ rebuild.
 Both passes are done for `--arch-all` and `--no-arch-all`. Any unused
 dependencies can then be found by investigating the `*.arch-all.unusedbd.real`
 and `*.no-arch-all.unusedbd.real`. The result from the former can permanently
-be dropped from the `Build-Depends`. The result from the latter can be added to
+be dropped from the `Build-Depends`. The result from the latter can be moved to
 `Build-Depends-Indep`.
 
 Schroot setup
@@ -49,9 +46,12 @@ Make apt ignore the `Valid-Until` header:
 
 	$ echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/80-nocheckvaliduntil
 
-Install `equivs`:
+Install `equivs` and `dctrl-tools`:
 
 	$ apt-get install equivs dctrl-tools --no-install-recommends
+
+The last action will also install file, gettext-base, gettext and debhelper so
+these cannot be found as unused anymore.
 
 Bugs
 ----
@@ -61,6 +61,7 @@ Bugs
  - when investigating which build dependencies are unused, virtual packages are not taken into account
  - maybe the fake equivs package can be built outside the schroot to avoid the additional dependencies for installing equivs
  - fatrace suffers from [bug#722901](https://bugs.debian.org/722901) which can be seen when trying to compile `lsof`
+ - if sbuild fails somehow (for example by the mirror becoming unavailable and sbuild failing with `E: apt-get update failed`) then the finished-build-commands are not run and the started processes never quit
 
 Feature Requests
 ----------------

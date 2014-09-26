@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 # start this script without arguments and then start sbuild as:
 #
-#    sbuild --chroot-setup-commands='/home/prebuildcmd.sh chroot-setup' --pre-realbuild-commands='/home/prebuildcmd.sh pre-realbuild' --post-realbuild-commands='/home/prebuildcmd.sh post-realbuild'
+#    sbuild --chroot-setup-commands='/home/findunusedbd.sh chroot-setup' --starting-build-commands='/home/findunusedbd.sh starting-build' --finished-build-commands='/home/findunusedbd.sh finished-build'
 
 get_metaset() {
 	name=$1
@@ -87,7 +87,7 @@ elif [ "$#" -eq 2 ]; then
 			tmpdir="$2"
 			dpkg --list | awk '$1 == "ii" { print $2"="$3 }' | sort > "${tmpdir}/initialselection.list"
 			;;
-		pre-realbuild)
+		starting-build)
 			tmpdir="$2"
 			# get the current selection so that the parent script can find the additional packages that were installed
 			dpkg --list | awk '$1 == "ii" { print $2"="$3 }' | sort > "${tmpdir}/fullselection.list"
@@ -135,7 +135,7 @@ elif [ "$#" -eq 2 ]; then
 			# wait for fatrace to be forked
 			cat "${tmpdir}/myfifo" > /dev/null
 			;;
-		post-realbuild)
+		finished-build)
 			tmpdir="$2"
 			# signal that the build is done
 			echo > "${tmpdir}/myfifo"
@@ -188,7 +188,7 @@ elif [ "$#" -eq 2 ]; then
 else
 	echo "usage: " >&2
 	echo "   $0 tmpdir"
-	echo "   $0 [chroot-setup|pre-realbuild|post-realbuild] tmpdir"
+	echo "   $0 [chroot-setup|starting-build|finished-build] tmpdir"
 	echo "   $0 equivs pkgname"
 	exit 1
 fi

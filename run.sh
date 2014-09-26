@@ -20,8 +20,8 @@ build () {
 	/home/findunusedbd.sh "$tmpdir" &
 	sbuild --$archall --quiet \
 		--chroot-setup-commands="/home/findunusedbd.sh chroot-setup $tmpdir" \
-		--pre-realbuild-commands="/home/findunusedbd.sh pre-realbuild $tmpdir" \
-		--post-realbuild-commands="/home/findunusedbd.sh post-realbuild $tmpdir" \
+		--starting-build-commands="/home/findunusedbd.sh starting-build $tmpdir" \
+		--finished-build-commands="/home/findunusedbd.sh finished-build $tmpdir" \
 		"$dsc"
 	ret=$?
 	rm -f *.deb *.udeb *.changes
@@ -71,7 +71,7 @@ check () {
 		# we need to run it as a pre-realbuild-commands hook because it needs all
 		# dependencies to be installed
 		sbuild --$archall --quiet \
-			--pre-realbuild-commands="/home/findunusedbd.sh equivs $bd" \
+			--starting-build-commands="/home/findunusedbd.sh equivs $bd" \
 			"$dscname"
 		if [ $? -eq 0 ]; then
 			echo $bd >> "${unusedbdname}".real
